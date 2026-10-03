@@ -1,0 +1,37 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: do-or-drink-android/do-or-drink
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: do-or-drink-android/do-or-drink/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm install
+      - run: npm run build
+      - name: Create Android project and sync
+        run: |
+          [ -d android ] || npx cap add android
+          npx capacitor-assets generate --android
+          npx cap sync android
+      - name: Build debug APK
+        run: cd android && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: do-or-drink-apk
+          path: do-or-drink-android/do-or-drink/android/app/build/outputs/apk/debug/app-debug.apk
